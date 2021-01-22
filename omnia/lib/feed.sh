@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 readSourcesAndBroadcastAllPriceMessages()  {
-	if [[ "${#assetPairs[@]}" -eq 0 || "${#OMNIA_FEED_SOURCES[@]}" -eq 0 || "${#OMNIA_FEED_PUBLISHERS[@]}" -eq 0 ]]
+	if [[ "${#assetPairs[@]}" -eq 0 || "${#OMNIA_FEED_SOURCES[@]}" -eq 0 || "${#OMNIA_TRANSPORTS[@]}" -eq 0 ]]
 	then
 		error "Error - Loop in readSourcesAndBroadcastAllPriceMessages"
 		return 1
@@ -24,6 +24,8 @@ readSourcesAndBroadcastAllPriceMessages()  {
 				continue
 			fi
 			local _assetPair=$(jq -r .asset <<<"$_json")
+			_assetPair="${_assetPair^^}"
+			_assetPair="${_assetPair/\/}"
 			local _median=$(jq -r .median <<<"$_json")
 			local _sources=$(jq -rS '.sources' <<<"$_json")
 			local	_message=$(validateAndConstructMessage "$_assetPair" "$_median"	"$_sources")
@@ -35,11 +37,7 @@ readSourcesAndBroadcastAllPriceMessages()  {
 
 			unset _unpublishedPairs[$_assetPair]
 
-			local _publisher
-			for _publisher in "${OMNIA_FEED_PUBLISHERS[@]}"; do
-				log "Publishing $_assetPair price message with $_publisher"
-				"$_publisher" publish "$_message" || error "Failed publishing $_assetPair price with $_publisher"
-			done
+			transportPublish "$_assetPair" "$_message"
 		done < <(readSource "$_src" "${!_unpublishedPairs[@]}")
 	done
 }
@@ -109,16 +107,6 @@ validateAndConstructMessage() {
 	if [[ "$(isPriceValid "$median")" == "false" ]]; then
 		error "Error - Failed to calculate valid median: ($median)"
 		debug "Sources = $sourcePrices"
-		return 1
-	fi
-
-	#Get latest message for asset pair
-	latestMsg=$(pullLatestFeedMsgOfType "$SCUTTLEBOT_FEED_ID" "$_assetPair")
-
-	if [ "$(isEmpty "$latestMsg")" == "false" ] \
-		&& [ "$(isAssetPair "$_assetPair" "$latestMsg")" == "true" ] \
-		&& [ "$(isMsgExpired "$_assetPair" "$latestMsg")" == "false" ] \
-		&& [ "$(isMsgStale "$_assetPair" "$latestMsg" "$median")" == "false" ]; then
 		return 1
 	fi
 

@@ -21,14 +21,12 @@ importEnv () {
 
 	importMode "$config"
 	importSources "$config"
-	importPublishers "$config"
+	importTransports "$config"
 	importEthereumEnv "$config"
 	importAssetPairsEnv "$config"
 	importOptionsEnv "$config"
 	importScuttlebotEnv
-	if [[ "$OMNIA_MODE" == "FEED" ]]; then
-		importServicesEnv "$config"
-	fi
+	importServicesEnv "$config"
 	if [[ "$OMNIA_MODE" == "RELAYER" ]]; then
 		importFeeds "$config"
 	fi
@@ -48,16 +46,10 @@ importSources () {
 	[[ "${#OMNIA_FEED_SOURCES[@]}" -gt 0 ]] || OMNIA_FEED_SOURCES=("setzer")
 }
 
-importPublishers () {
+importTransports () {
 	local _config="$1"
-	readarray -t OMNIA_FEED_PUBLISHERS < <(jq -r '.publishers[]' "$_config")
-	[[ "${#OMNIA_FEED_PUBLISHERS[@]}" -gt 0 ]] || OMNIA_FEED_PUBLISHERS=("oracle-transporter-ssb")
-}
-
-importPullers () {
-	local _config="$1"
-	readarray -t OMNIA_MESSAGE_PULLERS < <(jq -r '.pullers[]' "$_config")
-	[[ "${#OMNIA_MESSAGE_PULLERS[@]}" -gt 0 ]] || OMNIA_MESSAGE_PULLERS=("oracle-transporter-ssb")
+	readarray -t OMNIA_TRANSPORTS < <(jq -r '.transports[]' "$_config")
+	[[ "${#OMNIA_TRANSPORTS[@]}" -gt 0 ]] || OMNIA_TRANSPORTS=("oracle-transporter-ssb")
 }
 
 importNetwork () {
@@ -82,7 +74,7 @@ importNetwork () {
 	esac
 	#validate connection to ethereum network
 	[[ $(seth --rpc-url "$ETH_RPC_URL" block latest number) =~ ^[1-9]*[0-9]*$ ]] || errors+=("Error - Unable to connect to Ethereum network.\nValid options are: ethlive, mainnet, ropsten, kovan, rinkeby, goerli, or a custom endpoint")
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 	export ETH_RPC_URL
 }
 
@@ -109,7 +101,7 @@ importEthereumEnv () {
 	[[ -f "$ETH_PASSWORD" ]] || errors+=("Error - Ethereum Password Path is invalid, file does not exist.")
 	export ETH_PASSWORD
 
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 }
 
 importAssetPairsEnv () {
@@ -125,6 +117,7 @@ importAssetPairsEnv () {
 
 	[[ $OMNIA_MODE == "FEED" ]] && importAssetPairsFeed
 	[[ $OMNIA_MODE == "RELAYER" ]] && importAssetPairsRelayer
+	true
 }
 
 importAssetPairsFeed () {
@@ -134,6 +127,8 @@ importAssetPairsFeed () {
 
 	#Write values as comma seperated list to associative array
 	while IFS="=" read -r assetPair info; do
+		assetPair="${assetPair^^}"
+		assetPair="${assetPair/\/}"
 		assetInfo[$assetPair]="$info"
 	done < <(jq -r '.pairs | keys[] as $assetPair | "\($assetPair)=\(.[$assetPair] | .msgExpiration),\(.[$assetPair] | .msgSpread)"' "$_config")
 
@@ -145,7 +140,7 @@ importAssetPairsFeed () {
 		_msgSpread=$(getMsgSpread "$assetPair")
 		[[ "$_msgSpread" =~ ^([1-9][0-9]*([.][0-9]+)?|[0][.][0-9]*[1-9][0-9]*)$ ]] || errors+=("Error - Asset Pair param $assetPair has invalid or missing msgSpread field, must be positive integer or float.")
 	done
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 }
 
 importAssetPairsRelayer () {
@@ -156,6 +151,8 @@ importAssetPairsRelayer () {
 	local _oracleSpread
 
 	while IFS="=" read -r assetPair info; do
+		assetPair="${assetPair^^}"
+		assetPair="${assetPair/\/}"
 		assetInfo[$assetPair]="$info"
 	done < <(jq -r '.pairs | keys[] as $assetPair | "\($assetPair)=\(.[$assetPair] | .msgExpiration),\(.[$assetPair] | .oracle),\(.[$assetPair] | .oracleExpiration),\(.[$assetPair] | .oracleSpread)"' "$_config")
 
@@ -172,7 +169,7 @@ importAssetPairsRelayer () {
 		_oracleSpread=$(getOracleSpread "$assetPair")
 		[[ "$_oracleSpread" =~ ^([1-9][0-9]*([.][0-9]+)?|[0][.][0-9]*[1-9][0-9]*)$ ]] || errors+=("Error - Asset Pair param $assetPair has invalid or missing oracleSpread field, must be positive integer or float")
 	done
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 }
 
 importFeeds () {
@@ -181,9 +178,11 @@ importFeeds () {
 
 	readarray -t feeds < <(jq -r '.feeds[]' < "$_config")
 	for feed in "${feeds[@]}"; do
-		[[ $feed =~ ^(@){1}[a-zA-Z0-9+/]{43}(=.ed25519){1}$ ]] || { error "Error - Invalid feed address: $feed"; exit 1; }
+		[[ $feed =~ ^@[a-zA-Z0-9+/]{43}=.ed25519$ \
+		|| $feed =~ ^0x[0-9a-fA-F]{40}$ \
+		]] || { error "Error - Invalid feed address: $feed"; exit 1; }
 	done
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 }
 
 importOptionsEnv () {
@@ -222,21 +221,25 @@ importOptionsEnv () {
 		[[ "$SETZER_MIN_MEDIAN" =~ ^[1-9][0-9]*$ ]] || errors+=("Error - Setzer Minimum Median param is invalid, must be positive integer.")
 		export SETZER_MIN_MEDIAN
 
-		local usesGofer=$(jq '.sources | index("gofer") != null' <<<"$_json")
-		if [[ $usesGofer == true ]]; then
+		if jq -e '.sources | index("gofer") != null' "$_config"; then
 			OMNIA_GOFER_CONFIG="${OMNIA_GOFER_CONFIG:-$(echo "$_json" | jq -r '.goferConfig // "./gofer.json"')}"
 			[[ -e "$OMNIA_GOFER_CONFIG" ]] || errors+=("Error - Gofer config file '$OMNIA_GOFER_CONFIG' doesn't exist.")
 			export OMNIA_GOFER_CONFIG
 		fi
 	fi
 	
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 }
 
 importServicesEnv () {
 	local _config="$1"
+	local _services=$(jq -S '.services' "$_config")
 
-	[[ ${errors[*]} ]] && { printf '%s\n' "${errors[@]}"; exit 1; }
+	SSB_ID_MAP="$(jq -S '.scuttlebotIdMap // {}' <<<"$_services")"
+	jq -e 'type == "object"' <<<"$SSB_ID_MAP" >/dev/null 2>&1 || errors+=("Error - Scuttlebot ID mapping is invalid, must be Ethereum address -> Scuttlebot id.")
+	export SSB_ID_MAP
+
+	[[ -z ${errors[*]} ]] || { printf '%s\n' "${errors[@]}"; exit 1; }
 }
 
 importScuttlebotEnv () {

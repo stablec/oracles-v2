@@ -15,9 +15,7 @@ startGeth
 # Deploy Median contracts
 
 echo >&2 "# Deploy oracle contracts"
-oracles=$(deploy-median "${pairs[@]}" 2>"${E2E_LOGS-.}/deploy-median.out")
-#oracles=$(deploy-median "ETHUSD")
-#echo "$oracles" >&2
+oracles=$(deploy-median 0x1f8fbe73820765677e68eb6e933dcb3c94c9b708 "${pairs[@]}" 2>"${E2E_LOGS-.}/deploy-median.out")
 
 startSSB
 
@@ -37,6 +35,9 @@ done
 conf=$(jq --arg id $(ssbId) '.feeds = [ $id ]' <<<"$conf")
 conf=$(jq '.ethereum.network = "http://127.0.0.1:8545"' <<<"$conf")
 echo "$conf" > "$OMNIA_CONFIG"
+
+#echo >&2 "# HOME at $E2E_HOME"
+#tail -f /dev/null
 
 startOmnia
 
