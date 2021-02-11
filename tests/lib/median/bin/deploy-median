@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
+set -e
 
 join() { local IFS="$1"; shift; echo "$*"; }
 
 declare -a toLift
 declare -a pairs
-
-#if [[ $ETH_FROM =~ ^0x ]]; then
-#  toLift+=("${ETH_FROM#0x}")
-#fi
 
 for arg in "$@"; do
   if [[ $arg =~ ^0x ]]; then
