@@ -75,12 +75,12 @@
         "branch": "master",
         "description": null,
         "homepage": "",
-        "owner": "makerdao",
+        "owner": "stablec",
         "repo": "setzer-mcd",
-        "rev": "8229afe4ec1249cc7fa190068e7174f3244cdf45",
-        "sha256": "1pmz0dwpgyhljmhdc3960h05j77mvc2243mvcgcl4j69dskbqk6z",
+        "rev": "b000365d2fd465aee89733153d1d12acb910a4f0",
+        "sha256": "1vk80d98mqyc0j008k42naqjf7mj94nb56d524zxpkp87qdfvmw5",
         "type": "tarball",
-        "url": "https://github.com/makerdao/setzer-mcd/archive/8229afe4ec1249cc7fa190068e7174f3244cdf45.tar.gz",
+        "url": "https://github.com/stablec/setzer-mcd/archive/b000365d2fd465aee89733153d1d12acb910a4f0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
