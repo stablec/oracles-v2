@@ -77,10 +77,10 @@
         "homepage": "",
         "owner": "stablec",
         "repo": "setzer-mcd",
-        "rev": "559bd2fda3c00de69a92a7e01f649c66b07c2312",
-        "sha256": "16v36hq2lqms6zp6bh3lymwrn96w9r2yprk90nd7kj0h3p3fdpd7",
+        "rev": "13eecc2d226d83f09b470b1c70ce80895836582b",
+        "sha256": "1v4iq32931dh30wf2whksgi72slw9x39g7h93lkyb8ypxqdwdcrl",
         "type": "tarball",
-        "url": "https://github.com/stablec/setzer-mcd/archive/559bd2fda3c00de69a92a7e01f649c66b07c2312.tar.gz",
+        "url": "https://github.com/stablec/setzer-mcd/archive/13eecc2d226d83f09b470b1c70ce80895836582b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
